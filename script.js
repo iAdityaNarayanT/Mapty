@@ -94,7 +94,7 @@ class App {
     inputType.addEventListener('change', this._toggleElevationField);
     containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
   }
-  
+
   _getPosition() {
     if (navigator.geolocation)
       navigator.geolocation.getCurrentPosition(
@@ -104,7 +104,7 @@ class App {
         }
       );
   }
-  
+
   _loadMap(position) {
     const { latitude } = position.coords;
     const { longitude } = position.coords;
@@ -126,7 +126,7 @@ class App {
       this._renderWorkoutMarker(work);
     });
   }
-  
+
   _showForm(mapE) {
     this.#mapEvent = mapE;
     form.classList.remove('hidden');
@@ -135,14 +135,17 @@ class App {
 
   _hideForm() {
     // Empty inputs
-    inputDistance.value = inputDuration.value = inputCadence.value = inputElevation.value =
-      '';
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        '';
 
     form.style.display = 'none';
     form.classList.add('hidden');
     setTimeout(() => (form.style.display = 'grid'), 1000);
   }
-  
+
   _toggleElevationField() {
     inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
     inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
@@ -161,7 +164,7 @@ class App {
     const duration = +inputDuration.value;
     const { lat, lng } = this.#mapEvent.latlng;
     let workout;
-    
+
     // If workout running, create running object
     if (type === 'running') {
       const cadence = +inputCadence.value;
@@ -191,7 +194,7 @@ class App {
 
       workout = new Cycling([lat, lng], distance, duration, elevation);
     }
-    
+
     // Add new object to workout array
     this.#workouts.push(workout);
 
@@ -226,7 +229,6 @@ class App {
       .openPopup();
   }
 
-  
   _renderWorkout(workout) {
     let html = `
       <li class="workout workout--${workout.type}" data-id="${workout.id}">
@@ -277,3 +279,50 @@ class App {
 
     form.insertAdjacentHTML('afterend', html);
   }
+
+  _moveToPopup(e) {
+    // BUGFIX: When we click on a workout before the map has loaded, we get an error. But there is an easy fix:
+    if (!this.#map) return;
+
+    const workoutEl = e.target.closest('.workout');
+
+    if (!workoutEl) return;
+
+    const workout = this.#workouts.find(
+      work => work.id === workoutEl.dataset.id
+    );
+
+    this.#map.setView(workout.coords, this.#mapZoomLevel, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
+
+    // using the public interface
+    // workout.click();
+  }
+
+  _setLocalStorage() {
+    localStorage.setItem('workouts', JSON.stringify(this.#workouts));
+  }
+
+  _getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('workouts'));
+
+    if (!data) return;
+
+    this.#workouts = data;
+
+    this.#workouts.forEach(work => {
+      this._renderWorkout(work);
+    });
+  }
+
+  reset() {
+    localStorage.removeItem('workouts');
+    location.reload();
+  }
+}
+
+const app = new App();
